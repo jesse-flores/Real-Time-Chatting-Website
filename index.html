@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time Chat Site</title>
+    <link rel="stylesheet" href="css/styles.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+</head>
+<body>
+    
+
+        <h1>Chat With Others!</h1>
+        <br/>
+    <div id="chat"></div>
+    <br/>
+
+    <div class="text-inputs">
+    <table width="100%">
+        <tr>
+            <td><input type="text" id="messageInput" placeholder="Type your message here..." /></td>
+            <td width="1%"><button id="sendButton" onclick="sendMessage()" disabled>Send</button></td>
+        </tr>
+    </table>
+</div>
+    
+    
+    <script>
+        const chatDiv = document.getElementById('chat');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        
+        let username = prompt("Enter your username:");
+        if (!username) {
+            username = "SpicyCucumber";
+        }
+
+        const socket = new WebSocket('ws://localhost:8080');
+
+        socket.onopen = () => {
+            console.log('Connected to the server');
+            sendButton.disabled = false;
+        };
+
+        socket.onmessage = (event) => {
+            const message = event.data;
+
+            if (message instanceof Blob) {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const textMessage = reader.result;
+                    const newMessageDiv = document.createElement('div');
+                    newMessageDiv.textContent = textMessage;
+                    chatDiv.appendChild(newMessageDiv);
+                };
+                reader.readAsText(message);
+            } else {
+                const newMessageDiv = document.createElement('div');
+                newMessageDiv.textContent = message;
+                chatDiv.appendChild(newMessageDiv);
+            }
+        };
+
+        socket.onclose = () => {
+            console.log('Disconnected from server');
+            sendButton.disabled = true;
+        };
+
+        socket.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+
+        messageInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        function sendMessage() {
+            const message = messageInput.value;
+            if (message) {
+                if (socket.readyState === WebSocket.OPEN) {
+                    const messageWithUsername = `${username}: ${message}`;
+                    console.log('Sending message:', messageWithUsername);
+                    socket.send(messageWithUsername);
+                    appendMessage(messageWithUsername);
+                    messageInput.value = '';
+                } else {
+                    console.error('WebSocket is not open. State:', socket.readyState);
+                }
+            }
+        }
+        function appendMessage(message) {
+            const newMessageDiv = document.createElement('div');
+            newMessageDiv.textContent = message;
+            chatDiv.appendChild(newMessageDiv);
+        }
+    </script>
+</body>
+</html>
